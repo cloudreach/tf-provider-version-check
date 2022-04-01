@@ -25,4 +25,4 @@ jobs:
           files: |
             bin/tfpvc.linux-amd64.tar.gz
             bin/tfpvc.osx-amd64.tar.gz
-            bin/tfpvc.linux-arm64.tar.gz
+            bin/tfpvc.osx-arm64.tar.gz
