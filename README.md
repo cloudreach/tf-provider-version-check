@@ -1,4 +1,4 @@
-#Terraform Provider Version Check
+# Terraform Provider Version Check
 
 A utility to check whether Terraform providers configured in a project are up-to-date.
 
@@ -10,12 +10,28 @@ A utility to check whether Terraform providers configured in a project are up-to
 ## Usage
 
 ```shell
-tfpvc -help
-Usage of tfpvc:
-  -errorOnUpdate
-    	Exit with error code if updates are available
-  -workingDir string
-    	Directory with TF Files (default ".")
+tfpvc-osx-amd64 --help
+A utility to check whether Terraform providers configured in a project are up-to-date.
+
+* Reads .terraform.lock.hcl file to get details of providers used in a project
+* Looks up registry.terraform.io to get the latest version for each
+* If updates are available this is notified on STDOUT
+  * Can optionally return code on exit if update is available
+
+Usage:
+  tfpvc [flags]
+  tfpvc [command]
+
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+  version     Returns version data
+
+Flags:
+      --errorOnUpdate   Exit with error code if updates are available
+  -h, --help            help for tfpvc
+      --tfDir string    Directory with TF Files (default ".")
+
 ```
 
 ## Requirements
