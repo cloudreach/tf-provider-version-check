@@ -1,0 +1,7 @@
+# Compiled stuff
+/bin
+terraform-versions*
+
+# Golang
+.idea/
+
