@@ -33,7 +33,7 @@ release-mac-applesilicon:
 	$(eval VERSION=$(shell git describe --tags --abbrev=0))
 	sed -i "s/LOCAL/$(VERSION)/g" ./cmd/version.go
 	GOOS=darwin GOARCH=arm64 go build -o bin/$(BINARY_NAME) main.go
-	tar -C bin -czvf bin/$(BINARY_NAME).linux-amd64.tar.gz bin/$(BINARY_NAME)
+	tar -C bin -czvf bin/$(BINARY_NAME).linux-amd64.tar.gz $(BINARY_NAME)
 	git checkout -- ./cmd/version.go
 
 all: build-all
