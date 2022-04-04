@@ -5,20 +5,67 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-version"
-	"github.com/hashicorp/terraform-exec/tfexec"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
+	"os/user"
+	"path/filepath"
 	"strings"
 	"time"
+
+	mapset "github.com/deckarep/golang-set"
+	"github.com/fatih/color"
+	"github.com/hashicorp/go-version"
+	"github.com/hashicorp/terraform-exec/tfexec"
 )
 
+func findDirsWithFiles() []string {
+	var toReturn []string
+
+	var searchPath string
+	if strings.HasPrefix(tfDir, "~/") {
+		usr, _ := user.Current()
+		homeDir := usr.HomeDir
+
+		searchPath = filepath.Join(homeDir, tfDir[2:])
+	} else {
+		searchPath = tfDir
+	}
+
+	err := filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			log.Fatal(err)
+			return nil
+		}
+
+		if !info.IsDir() && info.Name() == ".terraform.lock.hcl" {
+			toReturn = append(toReturn, filepath.Dir(path))
+		}
+
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return toReturn
+}
+
 func check() {
-	if !lockFileExists(tfDir) {
-		fmt.Println("No .terraform.lock.hcl found. Exiting")
-		os.Exit(1)
+	dirSet := mapset.NewSet()
+
+	if findLockFiles {
+		for _, dir := range findDirsWithFiles() {
+			dirSet.Add(dir)
+		}
+	} else {
+		if !lockFileExists(tfDir) {
+			fmt.Println("No .terraform.lock.hcl found. Exiting")
+			os.Exit(1)
+		}
+		dirSet.Add(tfDir)
 	}
 
 	execPath, err := exec.LookPath("terraform")
@@ -27,23 +74,28 @@ func check() {
 		os.Exit(1)
 	}
 
-	tf, err := tfexec.NewTerraform(tfDir, execPath)
-	if err != nil {
-		fmt.Printf("Error accessing Terraform: %s\n", err)
-		os.Exit(1)
-	}
-
-	_, providerVersions, err := tf.Version(context.Background(), true)
-	if err != nil {
-		fmt.Printf("Error running terraform version: %s\n", err)
-		os.Exit(1)
-	}
-
 	updatesAvailable := false
-	for provider, version := range providerVersions {
-		updates := checkVersion(provider, version)
-		if updates {
-			updatesAvailable = true
+
+	dirIterator := dirSet.Iterator()
+	for dir := range dirIterator.C {
+		fmt.Println("Found lockfile in: " + dir.(string))
+		tf, err := tfexec.NewTerraform(dir.(string), execPath)
+		if err != nil {
+			fmt.Printf("Error accessing Terraform: %s\n", err)
+			os.Exit(1)
+		}
+
+		_, providerVersions, err := tf.Version(context.Background(), true)
+		if err != nil {
+			fmt.Printf("Error running terraform version: %s\n", err)
+			os.Exit(1)
+		}
+
+		for provider, version := range providerVersions {
+			updates := checkVersion(provider, version)
+			if updates {
+				updatesAvailable = true
+			}
 		}
 	}
 
@@ -56,6 +108,7 @@ func check() {
 	os.Exit(0)
 }
 
+// RegistryResponse represents the JSON return by the HC Registry as a struct
 type RegistryResponse struct {
 	ID          string    `json:"id"`
 	Owner       string    `json:"owner"`
@@ -93,30 +146,26 @@ func checkVersion(provider string, localVersion *version.Version) bool {
 	resp, err := http.Get("https://registry.terraform.io/v1/providers/" + providerName)
 	if err != nil {
 		fmt.Printf("Couldn't get provider details from HC: %s\n", err)
-		os.Exit(1)
 	}
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Printf("Couldn't get read response body: %s\n", err)
-		os.Exit(1)
 	}
 
 	var response RegistryResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		fmt.Printf("Could not unmarshal response JSON: %s\n", err)
-		os.Exit(1)
 	}
 
 	remoteVersion, err := version.NewVersion(response.Version)
 	if err != nil {
 		fmt.Printf("Could not parse remote version: %s\n", err)
-		os.Exit(1)
 	}
 
 	if localVersion.LessThan(remoteVersion) {
-		fmt.Println("Update of", providerName, "available", localVersion, "<", remoteVersion)
+		fmt.Println("Update of", color.HiYellowString(providerName), "available", color.RedString(localVersion.String()), "<", color.BlueString(remoteVersion.String()))
 		return true
 	}
 

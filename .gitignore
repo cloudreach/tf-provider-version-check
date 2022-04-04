@@ -1,7 +1,7 @@
 # Compiled stuff
 /bin
 terraform-versions*
+dist/
 
 # Golang
 .idea/
-
