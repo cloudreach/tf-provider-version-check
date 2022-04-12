@@ -7,6 +7,7 @@ import (
 
 var tfDir string
 var errorOnUpdate bool
+var findLockFiles bool
 
 var rootCmd = &cobra.Command{
 	Use:   "tfpvc",
@@ -22,6 +23,7 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+// Execute the check command
 func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
 }
@@ -30,6 +32,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&tfDir, "tfDir", ".", "Directory with TF Files")
+	rootCmd.PersistentFlags().BoolVar(&findLockFiles, "findLockFiles", true, "Search for lockfiles in tfDir")
 	rootCmd.PersistentFlags().BoolVar(&errorOnUpdate, "errorOnUpdate", false, "Exit with error code if updates are available")
 }
 

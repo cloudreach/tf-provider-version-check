@@ -1,0 +1,7 @@
+- id: terraform-provider-version-check
+  name: terraform-provider-version-check
+  description: Check versions of terraform providers
+  language: system
+  pass_filenames: false
+  entry: tfpvc
+  types: [terraform]
